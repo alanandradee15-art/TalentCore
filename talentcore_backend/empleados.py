@@ -41,7 +41,6 @@ class EmpleadoActualizar(BaseModel):
 # 1. REGISTRAR EMPLEADO
 # ==========================================
 
-@router.post("")
 def registrar_empleado(empleado: EmpleadoCrear):
     conexion = obtener_conexion()
 
