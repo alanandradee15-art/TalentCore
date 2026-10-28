@@ -1,9 +1,22 @@
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-# Importar los modulos de TalentCore
+from .database import inicializar_base_datos
 from .empleados import router as empleados_router
 from .vacaciones import router as vacaciones_router
+
+
+# ==========================================
+# INICIALIZAR BASE DE DATOS AL ARRANCAR
+# ==========================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    inicializar_base_datos()
+    yield
+
 
 # ==========================================
 # SISTEMA TALENTCORE
@@ -12,8 +25,10 @@ from .vacaciones import router as vacaciones_router
 app = FastAPI(
     title="TalentCore",
     description="Sistema de Gestion de Empleados y Vacaciones",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
+
 
 # ==========================================
 # RUTA PRINCIPAL
@@ -27,13 +42,15 @@ def inicio():
         "version": "1.0.0"
     }
 
+
 # ==========================================
-# SALUD DEL SERVIDOR - REQUISITO DEL PROFESOR
+# SALUD DEL SERVIDOR
 # ==========================================
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
 
 # ==========================================
 # RUTA DE SALUD ORIGINAL
@@ -46,11 +63,13 @@ def verificar_salud():
         "sistema": "TalentCore"
     }
 
+
 # ==========================================
 # MODULO DE EMPLEADOS
 # ==========================================
 
 app.include_router(empleados_router)
+
 
 # ==========================================
 # MODULO DE VACACIONES
