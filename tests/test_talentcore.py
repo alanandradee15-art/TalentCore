@@ -15,6 +15,54 @@ from talentcore_backend import database
 client = TestClient(app)
 
 
+# BASE DE DATOS TEMPORAL PARA TODAS LAS PRUEBAS
+@pytest.fixture(autouse=True)
+def base_temporal(tmp_path, monkeypatch):
+    ruta_temporal = tmp_path / "talentcore_pruebas.db"
+
+    # Redirigir la aplicacion a una base temporal.
+    monkeypatch.setattr(
+        database,
+        "DATABASE_PATH",
+        ruta_temporal,
+    )
+
+    # Crear las tablas de empleados y vacaciones.
+    inicializar_base_datos()
+
+    # Crear empleado de ejemplo con ID 1.
+    conexion = database.obtener_conexion()
+    try:
+        conexion.execute(
+            """
+            INSERT INTO empleados (
+                id,
+                nombre,
+                apellido,
+                correo,
+                puesto,
+                departamento,
+                anios_antiguedad
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                1,
+                "Empleado",
+                "Prueba",
+                "empleado.prueba@example.com",
+                "Analista",
+                "Tecnologia",
+                2,
+            ),
+        )
+        conexion.commit()
+    finally:
+        conexion.close()
+
+    yield ruta_temporal
+
+
 # PRUEBA 1: Pagina principal
 def test_pagina_principal():
     respuesta = client.get("/")
@@ -125,26 +173,8 @@ def test_historial_empleado_inexistente():
     assert respuesta.status_code == 404
 
 
-# BASE DE DATOS TEMPORAL PARA LAS NUEVAS PRUEBAS
-@pytest.fixture
-def base_temporal(tmp_path, monkeypatch):
-    ruta_temporal = tmp_path / "talentcore_pruebas.db"
-
-    # Redirige las conexiones de la aplicacion a la base temporal.
-    monkeypatch.setattr(
-        database,
-        "DATABASE_PATH",
-        ruta_temporal,
-    )
-
-    # Crea las tablas necesarias.
-    inicializar_base_datos()
-
-    yield ruta_temporal
-
-
 # PRUEBA 18: Registrar un empleado
-def test_registrar_empleado(base_temporal):
+def test_registrar_empleado():
     datos = {
         "nombre": "Laura",
         "apellido": "Gomez",
@@ -156,7 +186,7 @@ def test_registrar_empleado(base_temporal):
 
     respuesta = client.post(
         "/api/v1/empleados",
-        json=datos
+        json=datos,
     )
 
     assert respuesta.status_code == 200
@@ -172,7 +202,7 @@ def test_registrar_empleado(base_temporal):
 
 
 # PRUEBA 19: Consultar empleado recien registrado
-def test_consultar_empleado_registrado(base_temporal):
+def test_consultar_empleado_registrado():
     datos = {
         "nombre": "Mario",
         "apellido": "Lopez",
@@ -184,7 +214,7 @@ def test_consultar_empleado_registrado(base_temporal):
 
     creacion = client.post(
         "/api/v1/empleados",
-        json=datos
+        json=datos,
     )
 
     assert creacion.status_code == 200
@@ -201,7 +231,7 @@ def test_consultar_empleado_registrado(base_temporal):
 
 
 # PRUEBA 20: Registrar solicitud de vacaciones
-def test_registrar_solicitud_vacaciones(base_temporal):
+def test_registrar_solicitud_vacaciones():
     empleado = {
         "nombre": "Sofia",
         "apellido": "Martinez",
@@ -213,7 +243,7 @@ def test_registrar_solicitud_vacaciones(base_temporal):
 
     creacion = client.post(
         "/api/v1/empleados",
-        json=empleado
+        json=empleado,
     )
 
     assert creacion.status_code == 200
@@ -229,7 +259,7 @@ def test_registrar_solicitud_vacaciones(base_temporal):
 
     respuesta = client.post(
         "/vacaciones/",
-        json=solicitud
+        json=solicitud,
     )
 
     assert respuesta.status_code == 200
